@@ -221,6 +221,23 @@ jobs:
 
           # Deploy databases
           echo "🗄️ Deploying databases..."
+          
+          # StatefulSet volumeClaimTemplates are immutable - need to delete and recreate
+          echo "Cleaning up existing StatefulSets and PVCs (if any)..."
+          kubectl delete statefulset order-db inventory-db rabbitmq -n valerix --ignore-not-found=true
+          
+          # Wait for StatefulSets to be fully deleted
+          sleep 5
+          
+          # Delete PVCs (they won't be deleted automatically with Delete reclaim policy)
+          kubectl delete pvc -l app=order-db -n valerix --ignore-not-found=true
+          kubectl delete pvc -l app=inventory-db -n valerix --ignore-not-found=true
+          kubectl delete pvc -l app=rabbitmq -n valerix --ignore-not-found=true
+          
+          # Wait for PVCs to be fully deleted
+          sleep 5
+          
+          # Now apply the database manifests with new volumeClaimTemplates
           kubectl apply -f infrastructure/kubernetes/databases/
 
           # Wait a moment for resources to be created

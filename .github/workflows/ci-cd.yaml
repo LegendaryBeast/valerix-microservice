@@ -241,39 +241,61 @@ jobs:
           kubectl apply -f infrastructure/kubernetes/databases/
 
           # Wait a moment for resources to be created
-          sleep 5
+          sleep 10
 
           # Check PVC status
           echo ""
           echo "📊 PersistentVolumeClaim Status:"
           kubectl get pvc -n valerix || echo "No PVCs found yet"
-
-          # Wait for StatefulSets to be ready (databases take longer to initialize)
+          
+          # Check pod status immediately
           echo ""
-          echo "⏳ Waiting for databases to be ready (this may take up to 10 minutes)..."
+          echo "🔍 Initial Pod Status:"
+          kubectl get pods -n valerix -l 'app in (order-db,inventory-db,rabbitmq)' -o wide || echo "No database pods found yet"
+          
+          # Show any immediate errors
+          echo ""
+          echo "⚡ Recent Events:"
+          kubectl get events -n valerix --sort-by='.lastTimestamp' | tail -20
+
+          # Wait for StatefulSets to be ready (reduced timeout for faster feedback)
+          echo ""
+          echo "⏳ Waiting for databases to be ready (timeout: 3 minutes)..."
           
           # Wait for StatefulSets to exist and be ready
           echo "Waiting for Order DB StatefulSet..."
-          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/order-db -n valerix --timeout=600s; then
+          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/order-db -n valerix --timeout=180s; then
             echo "⚠️ Order DB StatefulSet timeout - checking details:"
             kubectl describe statefulset/order-db -n valerix || true
+            echo ""
             kubectl describe pods -l app=order-db -n valerix || true
+            echo ""
+            kubectl logs -l app=order-db -n valerix --tail=50 || true
+            echo ""
             kubectl get events -n valerix --sort-by='.lastTimestamp' | grep -i "order-db" || true
           fi
           
           echo "Waiting for Inventory DB StatefulSet..."
-          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/inventory-db -n valerix --timeout=600s; then
+          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/inventory-db -n valerix --timeout=180s; then
             echo "⚠️ Inventory DB StatefulSet timeout - checking details:"
             kubectl describe statefulset/inventory-db -n valerix || true
+            echo ""
             kubectl describe pods -l app=inventory-db -n valerix || true
+            echo ""
+            kubectl logs -l app=inventory-db -n valerix --tail=50 || true
+            echo ""
             kubectl get events -n valerix --sort-by='.lastTimestamp' | grep -i "inventory-db" || true
           fi
           
           echo "Waiting for RabbitMQ StatefulSet..."
-          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/rabbitmq -n valerix --timeout=600s; then
+          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/rabbitmq -n valerix --timeout=180s; then
             echo "⚠️ RabbitMQ StatefulSet timeout - checking details:"
             kubectl describe statefulset/rabbitmq -n valerix || true
+            echo ""
             kubectl describe pods -l app=rabbitmq -n valerix || true
+            echo ""
+            kubectl logs -l app=rabbitmq -n valerix --tail=50 || true
+            echo ""
             kubectl get events -n valerix --sort-by='.lastTimestamp' | grep -i "rabbitmq" || true
           fi
 

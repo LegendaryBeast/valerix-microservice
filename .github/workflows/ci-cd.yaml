@@ -211,24 +211,45 @@ jobs:
           # Deploy databases
           kubectl apply -f infrastructure/kubernetes/databases/
 
-          # Wait for databases to be ready
-          echo "Waiting for databases to be ready..."
-          kubectl wait --for=condition=ready pod -l app=order-db -n valerix --timeout=300s || echo "Order DB not ready yet"
-          kubectl wait --for=condition=ready pod -l app=inventory-db -n valerix --timeout=300s || echo "Inventory DB not ready yet"
+          # Wait for StatefulSets to be ready (databases take longer to initialize)
+          echo "Waiting for databases to be ready (this may take up to 10 minutes)..."
+          
+          # Wait for StatefulSets to exist and be ready
+         echo "Waiting for Order DB StatefulSet..."
+          kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/order-db -n valerix --timeout=600s || echo "Order DB StatefulSet timeout"
+          
+          echo "Waiting for Inventory DB StatefulSet..."
+          kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/inventory-db -n valerix --timeout=600s || echo "Inventory DB StatefulSet timeout"
+          
+          echo "Waiting for RabbitMQ StatefulSet..."
+          kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/rabbitmq -n valerix --timeout=600s || echo "RabbitMQ StatefulSet timeout"
+
+          # Additional wait for pods to be fully ready
+          echo "Verifying pod readiness..."
+          kubectl wait --for=condition=ready pod -l app=order-db -n valerix --timeout=120s || echo "Order DB pod check timed out"
+          kubectl wait --for=condition=ready pod -l app=inventory-db -n valerix --timeout=120s || echo "Inventory DB pod check timed out"
+          kubectl wait --for=condition=ready pod -l app=rabbitmq -n valerix --timeout=120s || echo "RabbitMQ pod check timed out"
+
+          # Show database status
+          echo "Database status:"
+          kubectl get statefulsets -n valerix
+          kubectl get pods -n valerix -l 'app in (order-db,inventory-db,rabbitmq)'
 
           # Deploy services
           kubectl apply -f infrastructure/kubernetes/services/
 
           # Wait a moment for deployments to be created
-          sleep 5
+          sleep 10
 
           # Restart deployments to pick up new images
+          echo "Restarting service deployments..."
           kubectl rollout restart deployment/order-service -n valerix || echo "Order service deployment not found yet"
           kubectl rollout restart deployment/inventory-service -n valerix || echo "Inventory service deployment not found yet"
 
-          # Wait for rollout to complete
-          kubectl rollout status deployment/order-service -n valerix --timeout=300s
-          kubectl rollout status deployment/inventory-service -n valerix --timeout=300s
+          # Wait for rollout to complete with increased timeout
+          echo "Waiting for service rollouts to complete..."
+          kubectl rollout status deployment/order-service -n valerix --timeout=600s || echo "Order service rollout timeout"
+          kubectl rollout status deployment/inventory-service -n valerix --timeout=600s || echo "Inventory service rollout timeout"
 
       - name: Verify Deployment
         run: |

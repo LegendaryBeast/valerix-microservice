@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: valerix
+  labels:
+    name: valerix
+    environment: production

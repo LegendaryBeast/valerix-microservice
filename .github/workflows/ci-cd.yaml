@@ -215,7 +215,7 @@ jobs:
           echo "Waiting for databases to be ready (this may take up to 10 minutes)..."
           
           # Wait for StatefulSets to exist and be ready
-         echo "Waiting for Order DB StatefulSet..."
+          echo "Waiting for Order DB StatefulSet..."
           kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/order-db -n valerix --timeout=600s || echo "Order DB StatefulSet timeout"
           
           echo "Waiting for Inventory DB StatefulSet..."

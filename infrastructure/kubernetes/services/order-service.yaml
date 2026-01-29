@@ -34,6 +34,9 @@ spec:
       containers:
       - name: order-service
         image: ghcr.io/legendarybeast/order-service:latest
+        imagePullPolicy: Always
+      imagePullSecrets:
+      - name: ghcr-secret
         ports:
         - containerPort: 3000
         env:

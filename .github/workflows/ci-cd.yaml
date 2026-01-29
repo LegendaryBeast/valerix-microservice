@@ -135,18 +135,48 @@ jobs:
 
       - name: Get GKE credentials
         run: |
-          # Handle Regional vs Zonal clusters automatically
-          # 1. Try to derive region from zone (remove -a, -b, -c suffix)
-          raw_zone="${{ secrets.GKE_ZONE }}"
-          region="${raw_zone%-[a-z]}"
+          LOCATION="${{ secrets.GKE_ZONE }}"
+          CLUSTER="${{ secrets.GKE_CLUSTER_NAME }}"
+          PROJECT="${{ secrets.GCP_PROJECT_ID }}"
           
-          echo "Attempting to connect to Regional cluster in $region..."
-          if gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} --region "$region" --project ${{ secrets.GCP_PROJECT_ID }}; then
-            echo "✅ Successfully connected to regional cluster"
-          else
-            echo "⚠️ Regional connection failed. Retrying as Zonal cluster in $raw_zone..."
-            gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} --zone "$raw_zone" --project ${{ secrets.GCP_PROJECT_ID }}
+          echo "🔍 Attempting to connect to GKE cluster: $CLUSTER in $LOCATION"
+          
+          # Try as region first (most common for production clusters)
+          if gcloud container clusters get-credentials "$CLUSTER" \
+              --region="$LOCATION" --project="$PROJECT" 2>/dev/null; then
+            echo "✅ Successfully connected using --region=$LOCATION"
+            exit 0
           fi
+          
+          # If that failed, try as zone
+          if gcloud container clusters get-credentials "$CLUSTER" \
+              --zone="$LOCATION" --project="$PROJECT" 2>/dev/null; then
+            echo "✅ Successfully connected using --zone=$LOCATION"
+            exit 0
+          fi
+          
+          # If location looks like a zone (ends with -a, -b, -c), try deriving region
+          if [[ "$LOCATION" =~ ^(.+)-[a-c]$ ]]; then
+            REGION="${BASH_REMATCH[1]}"
+            echo "🔄 Location appears to be a zone. Trying derived region: $REGION"
+            if gcloud container clusters get-credentials "$CLUSTER" \
+                --region="$REGION" --project="$PROJECT"; then
+              echo "✅ Successfully connected using derived --region=$REGION"
+              exit 0
+            fi
+          fi
+          
+          # All attempts failed
+          echo "❌ Failed to connect to cluster after trying all methods"
+          echo "   Cluster: $CLUSTER"
+          echo "   Location: $LOCATION"
+          echo "   Project: $PROJECT"
+          echo ""
+          echo "💡 Please verify:"
+          echo "   1. The GKE_ZONE secret contains the correct region (e.g., 'asia-south1') or zone (e.g., 'asia-south1-a')"
+          echo "   2. The cluster exists in the specified location"
+          echo "   3. The service account has permission to access the cluster"
+          exit 1
 
       - name: Deploy to Kubernetes
         run: |

@@ -2,8 +2,8 @@
 
 ## Your Configuration
 - **Project ID**: `devops-practice-485713`
-- **GKE Cluster**: `devops-practice`
-- **Zone**: `asia-south1-c`
+- **GKE Cluster**: `devops-practice` (Regional cluster)
+- **Region**: `asia-south1`
 - **GitHub Repo**: `LegendaryBeast/valerix-microservice`
 
 ---
@@ -23,7 +23,7 @@ Copy and paste these commands **one by one** into Cloud Shell:
 # Set your project
 export PROJECT_ID="devops-practice-485713"
 export GKE_CLUSTER_NAME="devops-practice"
-export GKE_ZONE="asia-south1-c"
+export GKE_REGION="asia-south1"  # Regional cluster
 export GITHUB_REPO_OWNER="LegendaryBeast"
 export GITHUB_REPO_NAME="valerix-microservice"
 
@@ -88,8 +88,8 @@ echo ""
 echo "GKE_CLUSTER_NAME:"
 echo "$GKE_CLUSTER_NAME"
 echo ""
-echo "GKE_ZONE:"
-echo "$GKE_ZONE"
+echo "GKE_ZONE (use region for regional clusters):"
+echo "$GKE_REGION"
 echo ""
 echo "WIF_PROVIDER:"
 echo "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
@@ -127,8 +127,9 @@ devops-practice
 
 #### Secret 3: `GKE_ZONE`
 ```
-asia-south1-c
+asia-south1
 ```
+**Important**: For regional clusters like `devops-practice`, use the **region** (e.g., `asia-south1`), not a zone (e.g., `asia-south1-c`)
 
 #### Secret 4: `WIF_PROVIDER`
 ```
@@ -192,8 +193,9 @@ If you prefer using the GCP Console UI instead of Cloud Shell:
 Run this in Cloud Shell to make sure your cluster is accessible:
 
 ```bash
+# For regional cluster, use --region instead of --zone
 gcloud container clusters get-credentials devops-practice \
-  --zone=asia-south1-c \
+  --region=asia-south1 \
   --project=devops-practice-485713
 
 kubectl get nodes

@@ -196,26 +196,39 @@ jobs:
           # Apply namespace
           kubectl apply -f infrastructure/kubernetes/namespace/
 
-          # Apply secrets (should be managed securely in production)
-          kubectl apply -f infrastructure/kubernetes/secrets.yaml.example
+          # Create secrets (using example values for now - should be replaced with GitHub Secrets in production)
+          kubectl create secret generic db-secrets \
+            --from-literal=order-db-password="orderpass123" \
+            --from-literal=inventory-db-password="inventorypass123" \
+            -n valerix \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic rabbitmq-secrets \
+            --from-literal=password="valerixpass123" \
+            -n valerix \
+            --dry-run=client -o yaml | kubectl apply -f -
 
           # Deploy databases
           kubectl apply -f infrastructure/kubernetes/databases/
 
           # Wait for databases to be ready
-          kubectl wait --for=condition=ready pod -l app=order-db -n valerix --timeout=300s || true
-          kubectl wait --for=condition=ready pod -l app=inventory-db -n valerix --timeout=300s || true
+          echo "Waiting for databases to be ready..."
+          kubectl wait --for=condition=ready pod -l app=order-db -n valerix --timeout=300s || echo "Order DB not ready yet"
+          kubectl wait --for=condition=ready pod -l app=inventory-db -n valerix --timeout=300s || echo "Inventory DB not ready yet"
 
           # Deploy services
           kubectl apply -f infrastructure/kubernetes/services/
 
+          # Wait a moment for deployments to be created
+          sleep 5
+
           # Restart deployments to pick up new images
-          kubectl rollout restart deployment/order-service -n valerix
-          kubectl rollout restart deployment/inventory-service -n valerix
+          kubectl rollout restart deployment/order-service -n valerix || echo "Order service deployment not found yet"
+          kubectl rollout restart deployment/inventory-service -n valerix || echo "Inventory service deployment not found yet"
 
           # Wait for rollout to complete
-          kubectl rollout status deployment/order-service -n valerix
-          kubectl rollout status deployment/inventory-service -n valerix
+          kubectl rollout status deployment/order-service -n valerix --timeout=300s
+          kubectl rollout status deployment/inventory-service -n valerix --timeout=300s
 
       - name: Verify Deployment
         run: |

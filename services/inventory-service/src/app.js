@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const logger = require('./utils/logger');
+const { metricsMiddleware, register } = require('./middleware/metrics');
 const { healthCheck, livenessProbe, readinessProbe } = require('./middleware/health');
 const gremlinMiddleware = require('./middleware/gremlin');
 const inventoryRoutes = require('./routes/inventory');
@@ -35,6 +36,9 @@ app.use('/api/', limiter);
 // Gremlin latency middleware (for chaos testing)
 app.use(gremlinMiddleware);
 
+// Metrics middleware
+app.use(metricsMiddleware);
+
 // Request logging middleware
 app.use((req, res, next) => {
     logger.info('Incoming request', {
@@ -50,10 +54,15 @@ app.get('/health', healthCheck);
 app.get('/health/live', livenessProbe);
 app.get('/health/ready', readinessProbe);
 
-// Metrics endpoint (placeholder)
-app.get('/metrics', (req, res) => {
-    res.set('Content-Type', 'text/plain');
-    res.send('# Metrics endpoint - Prometheus client to be implemented\n');
+// Metrics endpoint
+app.get('/metrics', async (req, res) => {
+    try {
+        res.set('Content-Type', register.contentType);
+        res.end(await register.metrics());
+    } catch (error) {
+        logger.error('Error generating metrics', { error: error.message });
+        res.status(500).end();
+    }
 });
 
 // API routes

@@ -35,8 +35,6 @@ spec:
       - name: inventory-service
         image: ghcr.io/legendarybeast/inventory-service:latest
         imagePullPolicy: Always
-      imagePullSecrets:
-      - name: ghcr-secret
         ports:
         - containerPort: 3002
         env:
@@ -71,3 +69,5 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
+      imagePullSecrets:
+      - name: ghcr-secret

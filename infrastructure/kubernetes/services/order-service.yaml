@@ -35,8 +35,6 @@ spec:
       - name: order-service
         image: ghcr.io/legendarybeast/order-service:latest
         imagePullPolicy: Always
-      imagePullSecrets:
-      - name: ghcr-secret
         ports:
         - containerPort: 3000
         env:
@@ -75,3 +73,5 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
+      imagePullSecrets:
+      - name: ghcr-secret

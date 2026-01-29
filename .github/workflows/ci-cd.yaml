@@ -209,7 +209,10 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
           # Apply StorageClass first (required for PVC provisioning in GKE)
-          echo "📦 Applying StorageClass..."
+          echo "📦 Setting up StorageClass..."
+          # Delete existing StorageClass if it exists (StorageClass fields are immutable)
+          kubectl delete storageclass standard-rwo --ignore-not-found=true
+          # Create new StorageClass
           kubectl apply -f infrastructure/kubernetes/storage/
 
           # Verify StorageClass

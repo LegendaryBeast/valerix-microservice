@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # PostgreSQL for Order Service
+  order-db:
+    image: postgres:15-alpine
+    container_name: valerix-order-db
+    environment:
+      POSTGRES_USER: orderuser
+      POSTGRES_PASSWORD: orderpass
+      POSTGRES_DB: orderdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+      - ../../scripts/init-order-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U orderuser" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - valerix-network
+
+  # PostgreSQL for Inventory Service
+  inventory-db:
+    image: postgres:15-alpine
+    container_name: valerix-inventory-db
+    environment:
+      POSTGRES_USER: inventoryuser
+      POSTGRES_PASSWORD: inventorypass
+      POSTGRES_DB: inventorydb
+    ports:
+      - "5433:5432"
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+      - ../../scripts/init-inventory-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U inventoryuser" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - valerix-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: valerix-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - valerix-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: valerix-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: valerix
+      RABBITMQ_DEFAULT_PASS: valerixpass
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - valerix-network
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: valerix-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - valerix-network
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: valerix-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - ../grafana/dashboards:/etc/grafana/provisioning/dashboards
+    depends_on:
+      - prometheus
+    networks:
+      - valerix-network
+
+  # Toxiproxy (for chaos testing)
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:latest
+    container_name: valerix-toxiproxy
+    ports:
+      - "8474:8474" # API port
+      - "8475:8475" # Inventory service proxy
+    networks:
+      - valerix-network
+
+volumes:
+  order-db-data:
+    driver: local
+  inventory-db-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  valerix-network:
+    driver: bridge

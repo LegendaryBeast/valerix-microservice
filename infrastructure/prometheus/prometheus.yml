@@ -1,0 +1,74 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'valerix-monitor'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Order Service
+  - job_name: 'order-service'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['order-service:3000']
+        labels:
+          service: 'order-service'
+          environment: 'development'
+
+  # Inventory Service
+  - job_name: 'inventory-service'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['inventory-service:3002']
+        labels:
+          service: 'inventory-service'
+          environment: 'development'
+
+  # PostgreSQL Exporters (if installed)
+  - job_name: 'postgres-order'
+    static_configs:
+      - targets: ['postgres-exporter-order:9187']
+        labels:
+          database: 'order-db'
+
+  - job_name: 'postgres-inventory'
+    static_configs:
+      - targets: ['postgres-exporter-inventory:9187']
+        labels:
+          database: 'inventory-db'
+
+  # Redis Exporter (if installed)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+
+  # RabbitMQ Exporter (if installed)
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+        labels:
+          service: 'rabbitmq'
+
+  # Node Exporter for system metrics (if installed)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']

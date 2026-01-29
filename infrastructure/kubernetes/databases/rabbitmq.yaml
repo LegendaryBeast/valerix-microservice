@@ -76,6 +76,7 @@ spec:
       name: rabbitmq-storage
     spec:
       accessModes: [ "ReadWriteOnce" ]
+      storageClassName: standard-rwo
       resources:
         requests:
           storage: 5Gi

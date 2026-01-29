@@ -103,6 +103,7 @@ spec:
       name: postgres-storage
     spec:
       accessModes: [ "ReadWriteOnce" ]
+      storageClassName: standard-rwo
       resources:
         requests:
-          storage: 10Gi
+          storage: 5Gi

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valerix Store - Place Your Order</title>
+    <meta name="description" content="Browse products and place orders at Valerix Store">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="brand">
+                    <svg class="brand-icon" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <h1 class="brand-name">Valerix Store</h1>
+                </div>
+                <button class="cart-button" onclick="toggleCart()">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M9 2L7 7M17 2L19 7M1 7H23M3 7L5 20H19L21 7M10 11V17M14 11V17" stroke="currentColor"
+                            stroke-width="2" />
+                    </svg>
+                    <span class="cart-count" id="cart-count">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Hero Section -->
+            <section class="hero">
+                <h2 class="hero-title">Welcome to Valerix Store</h2>
+                <p class="hero-subtitle">Browse our products and place your order in seconds</p>
+            </section>
+
+            <!-- Products Grid -->
+            <section class="products-section">
+                <div class="section-header">
+                    <h3 class="section-title">Available Products</h3>
+                    <button class="btn-refresh" onclick="loadProducts()">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="products-grid" id="products-grid">
+                    <div class="loading-card">
+                        <div class="spinner"></div>
+                        <p>Loading products...</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Shopping Cart Sidebar -->
+    <aside class="cart-sidebar" id="cart-sidebar">
+        <div class="cart-overlay" onclick="toggleCart()"></div>
+        <div class="cart-panel">
+            <div class="cart-header">
+                <h3>Your Cart</h3>
+                <button class="cart-close" onclick="toggleCart()">×</button>
+            </div>
+
+            <div class="cart-items" id="cart-items">
+                <div class="empty-cart">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M9 2L7 7M17 2L19 7M1 7H23M3 7L5 20H19L21 7" stroke="currentColor" stroke-width="2" />
+                    </svg>
+                    <p>Your cart is empty</p>
+                    <span>Add some products to get started</span>
+                </div>
+            </div>
+
+            <div class="cart-footer">
+                <div class="cart-total">
+                    <span>Total:</span>
+                    <strong id="cart-total">$0.00</strong>
+                </div>
+                <button class="btn-checkout" onclick="proceedToCheckout()" disabled id="checkout-btn">
+                    Proceed to Checkout
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Checkout Modal -->
+    <div class="modal" id="checkout-modal">
+        <div class="modal-backdrop" onclick="closeCheckout()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Complete Your Order</h2>
+                <button class="modal-close" onclick="closeCheckout()">×</button>
+            </div>
+            <form id="checkout-form" onsubmit="handleCheckout(event)">
+                <div class="form-section">
+                    <h4>Your Information</h4>
+                    <div class="form-group">
+                        <label for="customer-name">Full Name *</label>
+                        <input type="text" id="customer-name" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-email">Email Address *</label>
+                        <input type="email" id="customer-email" required placeholder="john@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="customer-phone">Phone Number *</label>
+                        <input type="tel" id="customer-phone" required placeholder="+1 (555) 123-4567">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>Delivery Address</h4>
+                    <div class="form-group">
+                        <label for="address">Street Address *</label>
+                        <input type="text" id="address" required placeholder="123 Main St">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">City *</label>
+                            <input type="text" id="city" required placeholder="New York">
+                        </div>
+                        <div class="form-group">
+                            <label for="zipcode">ZIP Code *</label>
+                            <input type="text" id="zipcode" required placeholder="10001">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>Order Summary</h4>
+                    <div id="checkout-summary" class="checkout-summary"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCheckout()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" />
+                            <path d="M22 4L12 14.01l-3-3" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                        Place Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="success-modal">
+        <div class="modal-backdrop" onclick="closeSuccess()"></div>
+        <div class="modal-content success-content">
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                    <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="2" />
+                </svg>
+            </div>
+            <h2>Order Placed Successfully!</h2>
+            <p>Your order has been received and is being processed.</p>
+            <div id="order-details" class="order-details"></div>
+            <button class="btn btn-primary" onclick="closeSuccess()">Continue Shopping</button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

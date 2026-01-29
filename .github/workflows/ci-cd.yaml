@@ -208,48 +208,89 @@ jobs:
             -n valerix \
             --dry-run=client -o yaml | kubectl apply -f -
 
+          # Apply StorageClass first (required for PVC provisioning in GKE)
+          echo "📦 Applying StorageClass..."
+          kubectl apply -f infrastructure/kubernetes/storage/
+
+          # Verify StorageClass
+          echo "Checking StorageClass:"
+          kubectl get storageclass standard-rwo || echo "⚠️ StorageClass not found"
+
           # Deploy databases
+          echo "🗄️ Deploying databases..."
           kubectl apply -f infrastructure/kubernetes/databases/
 
+          # Wait a moment for resources to be created
+          sleep 5
+
+          # Check PVC status
+          echo ""
+          echo "📊 PersistentVolumeClaim Status:"
+          kubectl get pvc -n valerix || echo "No PVCs found yet"
+
           # Wait for StatefulSets to be ready (databases take longer to initialize)
-          echo "Waiting for databases to be ready (this may take up to 10 minutes)..."
+          echo ""
+          echo "⏳ Waiting for databases to be ready (this may take up to 10 minutes)..."
           
           # Wait for StatefulSets to exist and be ready
           echo "Waiting for Order DB StatefulSet..."
-          kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/order-db -n valerix --timeout=600s || echo "Order DB StatefulSet timeout"
+          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/order-db -n valerix --timeout=600s; then
+            echo "⚠️ Order DB StatefulSet timeout - checking details:"
+            kubectl describe statefulset/order-db -n valerix || true
+            kubectl describe pods -l app=order-db -n valerix || true
+            kubectl get events -n valerix --sort-by='.lastTimestamp' | grep -i "order-db" || true
+          fi
           
           echo "Waiting for Inventory DB StatefulSet..."
-          kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/inventory-db -n valerix --timeout=600s || echo "Inventory DB StatefulSet timeout"
+          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/inventory-db -n valerix --timeout=600s; then
+            echo "⚠️ Inventory DB StatefulSet timeout - checking details:"
+            kubectl describe statefulset/inventory-db -n valerix || true
+            kubectl describe pods -l app=inventory-db -n valerix || true
+            kubectl get events -n valerix --sort-by='.lastTimestamp' | grep -i "inventory-db" || true
+          fi
           
           echo "Waiting for RabbitMQ StatefulSet..."
-          kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/rabbitmq -n valerix --timeout=600s || echo "RabbitMQ StatefulSet timeout"
+          if ! kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 statefulset/rabbitmq -n valerix --timeout=600s; then
+            echo "⚠️ RabbitMQ StatefulSet timeout - checking details:"
+            kubectl describe statefulset/rabbitmq -n valerix || true
+            kubectl describe pods -l app=rabbitmq -n valerix || true
+            kubectl get events -n valerix --sort-by='.lastTimestamp' | grep -i "rabbitmq" || true
+          fi
 
           # Additional wait for pods to be fully ready
-          echo "Verifying pod readiness..."
-          kubectl wait --for=condition=ready pod -l app=order-db -n valerix --timeout=120s || echo "Order DB pod check timed out"
-          kubectl wait --for=condition=ready pod -l app=inventory-db -n valerix --timeout=120s || echo "Inventory DB pod check timed out"
-          kubectl wait --for=condition=ready pod -l app=rabbitmq -n valerix --timeout=120s || echo "RabbitMQ pod check timed out"
+          echo ""
+          echo "🔍 Verifying pod readiness..."
+          kubectl wait --for=condition=ready pod -l app=order-db -n valerix --timeout=120s || echo "⚠️ Order DB pod check timed out"
+          kubectl wait --for=condition=ready pod -l app=inventory-db -n valerix --timeout=120s || echo "⚠️ Inventory DB pod check timed out"
+          kubectl wait --for=condition=ready pod -l app=rabbitmq -n valerix --timeout=120s || echo "⚠️ RabbitMQ pod check timed out"
 
           # Show database status
-          echo "Database status:"
+          echo ""
+          echo "📊 Database Status:"
           kubectl get statefulsets -n valerix
           kubectl get pods -n valerix -l 'app in (order-db,inventory-db,rabbitmq)'
+          echo ""
+          echo "💾 PVC Status:"
+          kubectl get pvc -n valerix
 
           # Deploy services
+          echo ""
+          echo "🚀 Deploying microservices..."
           kubectl apply -f infrastructure/kubernetes/services/
 
           # Wait a moment for deployments to be created
           sleep 10
 
           # Restart deployments to pick up new images
-          echo "Restarting service deployments..."
-          kubectl rollout restart deployment/order-service -n valerix || echo "Order service deployment not found yet"
-          kubectl rollout restart deployment/inventory-service -n valerix || echo "Inventory service deployment not found yet"
+          echo "🔄 Restarting service deployments..."
+          kubectl rollout restart deployment/order-service -n valerix || echo "⚠️ Order service deployment not found yet"
+          kubectl rollout restart deployment/inventory-service -n valerix || echo "⚠️ Inventory service deployment not found yet"
 
           # Wait for rollout to complete with increased timeout
-          echo "Waiting for service rollouts to complete..."
-          kubectl rollout status deployment/order-service -n valerix --timeout=600s || echo "Order service rollout timeout"
-          kubectl rollout status deployment/inventory-service -n valerix --timeout=600s || echo "Inventory service rollout timeout"
+          echo ""
+          echo "⏳ Waiting for service rollouts to complete..."
+          kubectl rollout status deployment/order-service -n valerix --timeout=600s || echo "⚠️ Order service rollout timeout"
+          kubectl rollout status deployment/inventory-service -n valerix --timeout=600s || echo "⚠️ Inventory service rollout timeout"
 
       - name: Verify Deployment
         run: |

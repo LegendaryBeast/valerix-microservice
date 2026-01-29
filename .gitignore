@@ -77,3 +77,4 @@ grafana-data/
 .cache/
 .terraform/
 *.pid
+CREDENTIALS_AND_CONFIG.md

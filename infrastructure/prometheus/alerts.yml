@@ -15,7 +15,7 @@ groups:
       # Circuit Breaker Alert
       - alert: CircuitBreakerOpen
         expr: circuit_breaker_status{service="inventory"} == 1
-       for: 30s
+        for: 30s
         labels:
           severity: critical
         annotations:
